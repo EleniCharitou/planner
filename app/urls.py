@@ -1,20 +1,17 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
-from . import views
-from rest_framework import routers
-
-from .views import TripViewSet
+from .models import VisitedAttraction
+from .views import TripViewSet, ColumnViewSet, AttractionViewSet, VisitedAttractionViewSet
 
 router = DefaultRouter()
 router.register(r'trip', TripViewSet, basename='trip')
+router.register(r'column', ColumnViewSet, basename='column')
+router.register(r'attraction', AttractionViewSet, basename='attraction')
+router.register(r'visited', VisitedAttractionViewSet, basename='visited')
+
 
 
 urlpatterns = [
     path('', include(router.urls)),
-	path('', views.app_overview, name='home'),
-    path('create/', views.add_items, name='add-items'),
-    path('all/', views.view_items, name='view-items'),
-    path('update/<int:pk>', views.update_items, name='update-items'),
-    path('item/<int:pk>/delete/', views.delete_items, name='delete-items'),
 ]
