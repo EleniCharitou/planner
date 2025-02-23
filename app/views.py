@@ -1,7 +1,9 @@
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.authentication import JWTAuthentication
+
 from .models import Trip, Column, Attraction, VisitedAttraction
 from .serializers import TripSerializer, ColumnSerializer, AttractionSerializer, VisitedAttractionSerializer
 from rest_framework import viewsets
-
 
 class TripViewSet(viewsets.ModelViewSet):
     queryset = Trip.objects.all()
@@ -18,5 +20,3 @@ class AttractionViewSet(viewsets.ModelViewSet):
 class VisitedAttractionViewSet(viewsets.ModelViewSet):
     queryset = VisitedAttraction.objects.all()
     serializer_class = VisitedAttractionSerializer
-
-
