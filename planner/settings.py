@@ -38,8 +38,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.staticfiles',
 
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.openid_connect',
+
     'rest_framework',
-    'rest_framework_simplejwt',
+    # 'rest_framework_simplejwt',
+    "rest_framework.authtoken",
+    "dj_rest_auth",
     'app',  # my app
 ]
 
@@ -51,6 +58,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'planner.urls'
@@ -132,7 +140,9 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ),
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        # 'rest_framework_simplejwt.authentication.JWTAuthentication',
+        "rest_framework.authentication.SessionAuthentication",  # For logged-in users
+        "rest_framework.authentication.TokenAuthentication",
     ),
 }
 
@@ -146,5 +156,28 @@ SIMPLE_JWT = {
 
 
 AUTHENTICATION_BACKENDS = (
+    'allauth.account.auth_backends.AuthenticationBackend',
     "django.contrib.auth.backends.ModelBackend",
 )
+
+SOCIALACCOUNT_PROVIDERS = {
+    "openid_connect": {
+        "APPS": [
+            {
+                "provider_id": "keycloak",
+                "name": "Keycloak",
+                "client_id": "Planner-oidc",
+                "secret": "To5pIMA7BK4gjDaMcisr0Iip6BSdJz2W",
+                "settings": {
+                    "server_url": "https://euc1.auth.ac/auth/realms/planner/.well-known/openid-configuration",
+                    "authorization_endpoint": "https://euc1.auth.ac/auth/realms/planner/protocol/openid-connect/auth",
+                    "token_endpoint": "https://euc1.auth.ac/auth/realms/planner/protocol/openid-connect/token",
+                    "userinfo_endpoint": "https://euc1.auth.ac/auth/realms/planner/protocol/openid-connect/userinfo",
+                    "jwks_uri": "https://euc1.auth.ac/auth/realms/planner/protocol/openid-connect/certs",
+                }
+            }
+        ]
+    }
+}
+
+LOGIN_REDIRECT_URL = '/api/trip'
