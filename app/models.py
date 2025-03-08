@@ -1,5 +1,8 @@
+from math import trunc
+
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils.text import slugify
 
 
 class Trip(models.Model):           # is a Board
@@ -49,3 +52,27 @@ class VisitedAttraction(models.Model):
     moment = models.TextField()                              # experience description, a funny,silly,awkward moment to remember
     reviewed_at = models.DateTimeField()
     actualCost = models.DecimalField(max_digits=6, decimal_places=2)
+
+class Post(models.Model):
+    title = models.CharField(max_length=255)
+    content = models.TextField()
+    slug = models.SlugField(unique=True, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self) -> str:
+        return self.title
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.title)
+            unique_slug = self.slug
+            counter = 1
+            while Post.objects.filter(slug=unique_slug).exists():
+                unique_slug = f'{self.slug}{counter}'
+                counter += 1
+            self.slug = unique_slug
+
+        super().save(*args, **kwargs)
