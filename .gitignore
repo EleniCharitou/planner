@@ -1,0 +1,17 @@
+﻿# Ignore compiled Python files
+__pycache__/
+*.pyc
+
+# Ignore virtual environment
+.venv/
+
+# Ignore editor settings
+.idea/
+.vscode/
+
+# Ignore database files
+db.sqlite3
+
+# Ignore dependency files
+Pipfile
+Pipfile.lock
