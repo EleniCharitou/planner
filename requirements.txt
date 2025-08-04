@@ -1,0 +1,10 @@
+Django>=5.1.6,<6.0
+django-allauth
+djangorestframework
+dj-rest-auth
+django-cors-headers
+djangorestframework-simplejwt
+python-decouple
+PyJWT
+requests
+

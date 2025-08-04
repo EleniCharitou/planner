@@ -1,7 +1,7 @@
 from django.core.serializers import serialize
 from django.http import HttpResponse
 from django.shortcuts import render
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.authentication import JWTAuthentication
@@ -23,6 +23,23 @@ class AttractionViewSet(viewsets.ModelViewSet):
     queryset = Attraction.objects.all()
     serializer_class = AttractionSerializer
 
+class GroupedAttractionsViewSet(viewsets.ModelViewSet):
+    def list(self, request):
+        attractions = Attraction.objects.order_by('column_id')
+
+        grouped_data = {}
+        for attraction in attractions:
+            column_id = attraction.column_id.id
+            if column_id not in grouped_data:
+                grouped_data[column_id] = {
+                    "id": column_id,
+                    "title": attraction.title,
+                    "cards": []
+                }
+            grouped_data[column_id]["cards"].append(AttractionSerializer(attraction).data)
+
+        return Response(list(grouped_data.values()))
+
 class VisitedAttractionViewSet(viewsets.ModelViewSet):
     queryset = VisitedAttraction.objects.all()
     serializer_class = VisitedAttractionSerializer
@@ -38,3 +55,10 @@ class PostViewSet(viewsets.ModelViewSet):
         posts = Post.objects.all()[:6]
         serializer = PostSerializer(posts, many=True)
         return Response(serializer.data)
+
+    @api_view(['POST'])
+    def upload_image(request):
+        if 'image' in request.FILES:
+            image = request.FILES['image']
+            return Response({'image_url': 'path/to/uploaded/image.jpg'})
+        return Response({'error': 'No image provided'}, status=400)

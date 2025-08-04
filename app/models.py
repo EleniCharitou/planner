@@ -12,7 +12,7 @@ class Trip(models.Model):           # is a Board
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
     # owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='trips')
-    is_public = models.BooleanField()
+    is_public = models.BooleanField(default=False)
     # budget = models.ForeignKey
     def clean(self):
         if self.start_date and self.end_date:
@@ -20,7 +20,7 @@ class Trip(models.Model):           # is a Board
                 raise ValidationError("Start date must be before end date")
 
     def get_duration_days(self):
-        return (self.start_date - self.start_date).days
+        return (self.end_date - self.start_date).days
 
     def __str__(self) -> str:
         return self.destination
@@ -51,13 +51,12 @@ class Attraction(models.Model):         # is a trello card
         ('other', 'Other')
     ]
     column_id = models.ForeignKey(Column, on_delete=models.CASCADE)
-    price = models.PositiveBigIntegerField()
     title = models.CharField(max_length=60)
     location = models.CharField(max_length=50)
     category = models.CharField(max_length=40, choices=CATEGORY_CHOICES, default='other')
     # maybe it's better to create a separate model 'attraction_attachment' for extra fields [id, attraction_id, uploaded_date, filename, file_location]
-    mapUrl = models.URLField()
-    ticket = models.URLField()                              # or file, to be able to accept all images, urls, or pdfs 
+    mapUrl = models.URLField(blank=True, null=True)
+    ticket = models.URLField(blank=True)                              # or file, to be able to accept all images, urls, or pdfs
     date = models.DateTimeField()
     cost = models.DecimalField(max_digits=6, decimal_places=2)
     visited =models.BooleanField()
@@ -85,6 +84,7 @@ class Post(models.Model):
     content = models.TextField()
     slug = models.SlugField(unique=True, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    picture = models.ImageField(upload_to='posts/', null=True, blank=True)
 
     class Meta:
         ordering = ['-created_at']
