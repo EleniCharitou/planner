@@ -12,21 +12,18 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 from datetime import timedelta
 from pathlib import Path
+from dotenv import load_dotenv
 
+load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
+SECRET_KEY = os.environ.get('SECRET_KEY', "dev-secret-key")
+DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-b!4)io25j%l$qxokbhqi=ou9=n6p6kpjw4z^8ph#e&7*%kt7=('
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = []
+RENDER_EXTERNAL_HOSTNAME = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
+ALLOWED_HOSTS = [RENDER_EXTERNAL_HOSTNAME] if RENDER_EXTERNAL_HOSTNAME else ["localhost", "127.0.0.1"]
 
 
 # Application definition
@@ -45,7 +42,6 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.openid_connect',
 
     'rest_framework',
-    # 'rest_framework_simplejwt',
     "rest_framework.authtoken",
     'dj_rest_auth',
     'corsheaders',
@@ -64,7 +60,7 @@ MIDDLEWARE = [
     'allauth.account.middleware.AccountMiddleware',
 ]
 
-CORS_ALLOWED_ORIGINS = [
+CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",") if os.environ.get("CORS_ALLOWED_ORIGINS") else [
     "http://localhost:5173",
     "http://127.0.0.1:5174"
 ]
@@ -91,23 +87,17 @@ TEMPLATES = [
 WSGI_APPLICATION = 'planner.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'travel-planner-db',
-        'USER': 'postgres',
-        'PASSWORD': 'postgres',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': os.environ.get('DB_NAME'),
+        'USER': os.environ.get('DB_USER'),
+        'PASSWORD': os.environ.get('DB_PASSWORD'),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 
-
-# Password validation
-# https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -138,12 +128,10 @@ USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.1/howto/static-files/
-
 STATIC_URL = 'static/'
-
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
+if not DEBUG:
+    STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -172,26 +160,6 @@ AUTHENTICATION_BACKENDS = (
     'allauth.account.auth_backends.AuthenticationBackend',
     "django.contrib.auth.backends.ModelBackend",
 )
-
-SOCIALACCOUNT_PROVIDERS = {
-    "openid_connect": {
-        "APPS": [
-            {
-                "provider_id": "keycloak",
-                "name": "Keycloak",
-                "client_id": "Planner-oidc",
-                "secret": "To5pIMA7BK4gjDaMcisr0Iip6BSdJz2W",
-                "settings": {
-                    "server_url": "https://euc1.auth.ac/auth/realms/planner/.well-known/openid-configuration",
-                    "authorization_endpoint": "https://euc1.auth.ac/auth/realms/planner/protocol/openid-connect/auth",
-                    "token_endpoint": "https://euc1.auth.ac/auth/realms/planner/protocol/openid-connect/token",
-                    "userinfo_endpoint": "https://euc1.auth.ac/auth/realms/planner/protocol/openid-connect/userinfo",
-                    "jwks_uri": "https://euc1.auth.ac/auth/realms/planner/protocol/openid-connect/certs",
-                }
-            }
-        ]
-    }
-}
 
 LOGIN_REDIRECT_URL = '/api/trip'
 
