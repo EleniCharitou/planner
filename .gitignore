@@ -15,3 +15,5 @@ db.sqlite3
 # Ignore dependency files
 Pipfile
 Pipfile.lock
+
+staticfiles/
