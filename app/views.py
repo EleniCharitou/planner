@@ -19,21 +19,38 @@ class ColumnViewSet(viewsets.ModelViewSet):
     queryset = Column.objects.all()
     serializer_class = ColumnSerializer
 
+    def get_queryset(self):
+        queryset = Column.objects.all()
+        trip_id = self.request.query_params.get('trip_id', None)
+        if trip_id is not None:
+            queryset = queryset.filter(trip_id=trip_id)
+        return queryset
+
 class AttractionViewSet(viewsets.ModelViewSet):
     queryset = Attraction.objects.all()
     serializer_class = AttractionSerializer
 
-class GroupedAttractionsViewSet(viewsets.ModelViewSet):
+class GroupedAttractionsViewSet(viewsets.ViewSet):
     def list(self, request):
+        trip_id = request.query_params.get('trip_id')
+
+        if trip_id:
+            attractions = Attraction.objects.filter(column_id__trip_id=trip_id).order_by('column_id')
+        else:
+            attractions = Attraction.objects.order_by('column_id')
+
+        grouped_data = {}
         attractions = Attraction.objects.order_by('column_id')
 
         grouped_data = {}
         for attraction in attractions:
-            column_id = attraction.column_id.id
+            column = attraction.column_id
+            column_id = column.id
+
             if column_id not in grouped_data:
                 grouped_data[column_id] = {
                     "id": column_id,
-                    "title": attraction.title,
+                    "title": column.title,
                     "cards": []
                 }
             grouped_data[column_id]["cards"].append(AttractionSerializer(attraction).data)

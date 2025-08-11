@@ -8,12 +8,15 @@ from rest_framework.exceptions import ValidationError
 
 class Trip(models.Model):           # is a Board
     destination = models.CharField(max_length=255)      #maybe change that to: slug = models.SlugField(unique=True, max_length=255)
-    trip_members = models.CharField(max_length=500)
+    trip_members = models.JSONField(default=list)
     start_date = models.DateTimeField()
+    start_time = models.TimeField()
     end_date = models.DateTimeField()
+    end_time = models.TimeField()
     # owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='trips')
-    is_public = models.BooleanField(default=False)
+    # is_public = models.BooleanField(default=False)
     # budget = models.ForeignKey
+
     def clean(self):
         if self.start_date and self.end_date:
             if self.start_date > self.end_date:
