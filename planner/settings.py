@@ -60,11 +60,12 @@ MIDDLEWARE = [
     'allauth.account.middleware.AccountMiddleware',
 ]
 
-CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",") if os.environ.get("CORS_ALLOWED_ORIGINS") else [
-    "https://sr6q75-5173.csb.app",
-    "http://localhost:5173",
-    "http://127.0.0.1:5174"
-]
+# CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",") if os.environ.get("CORS_ALLOWED_ORIGINS") else [
+#     "https://sr6q75-5173.csb.app",
+#     "http://localhost:5173",
+#     "http://127.0.0.1:5174"
+# ]
+CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = 'planner.urls'
 
