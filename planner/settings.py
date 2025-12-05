@@ -35,15 +35,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.sessions',
     'django.contrib.staticfiles',
-
-    'allauth',
-    'allauth.account',
-    'allauth.socialaccount',
-    'allauth.socialaccount.providers.openid_connect',
-
+    'users',
     'rest_framework',
-    "rest_framework.authtoken",
-    'dj_rest_auth',
     'corsheaders',
     'app',  # my app
 ]
@@ -57,7 +50,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'allauth.account.middleware.AccountMiddleware',
 ]
 
 # CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",") if os.environ.get("CORS_ALLOWED_ORIGINS") else [
@@ -143,9 +135,9 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.AllowAny',
     ),
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        # 'rest_framework_simplejwt.authentication.JWTAuthentication',
-        "rest_framework.authentication.SessionAuthentication",  # For logged-in users
-        "rest_framework.authentication.TokenAuthentication",
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        # "rest_framework.authentication.SessionAuthentication",  # For logged-in users
+        # "rest_framework.authentication.TokenAuthentication",
     ),
 }
 
@@ -159,7 +151,6 @@ SIMPLE_JWT = {
 
 
 AUTHENTICATION_BACKENDS = (
-    'allauth.account.auth_backends.AuthenticationBackend',
     "django.contrib.auth.backends.ModelBackend",
 )
 
@@ -168,3 +159,6 @@ LOGIN_REDIRECT_URL = '/api/trip'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+
+AUTH_USER_MODEL = 'users.User'
