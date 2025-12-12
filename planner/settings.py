@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'app',  # my app
+    'drf_yasg',
 ]
 
 MIDDLEWARE = [
@@ -132,9 +133,8 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-        # "rest_framework.authentication.SessionAuthentication",  # For logged-in users
-        # "rest_framework.authentication.TokenAuthentication",
     ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 SIMPLE_JWT = {
@@ -158,3 +158,9 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 
 AUTH_USER_MODEL = 'users.User'
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Planner API',
+    'DESCRIPTION': 'API documentation for the Planner project',
+    'VERSION': '1.0.0',
+}
