@@ -5,6 +5,7 @@ from django.db import models
 from django.utils.text import slugify
 from rest_framework.exceptions import ValidationError
 
+from planner import settings
 
 class Trip(models.Model):           # is a Board
     destination = models.CharField(max_length=255)      #maybe change that to: slug = models.SlugField(unique=True, max_length=255)
@@ -13,9 +14,12 @@ class Trip(models.Model):           # is a Board
     start_time = models.TimeField()
     end_date = models.DateTimeField()
     end_time = models.TimeField()
-    # owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='trips')
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='trips')
     # is_public = models.BooleanField(default=False)
     # budget = models.ForeignKey
+
+    class Meta:
+        ordering = ['-start_date']
 
     def clean(self):
         if self.start_date and self.end_date:
@@ -26,11 +30,11 @@ class Trip(models.Model):           # is a Board
         return (self.end_date - self.start_date).days
 
     def __str__(self) -> str:
-        return self.destination
+        return f"{self.destination} - {self.owner.email}"
 
 # stores the attraction that user wants to visit  within a trip in a specific column-day
 class Column(models.Model):
-    trip_id = models.ForeignKey(Trip, on_delete=models.CASCADE)
+    trip_id = models.ForeignKey(Trip, on_delete=models.CASCADE, related_name='columns')
     title = models.CharField(max_length=100, default='Day')
     position = models.PositiveBigIntegerField()      # a numeric field to identify where on the board it would be shown
 
@@ -39,7 +43,7 @@ class Column(models.Model):
         ordering = ['position']
 
     def __str__(self) -> str:
-        return self.title
+        return f"{self.title} - {self.trip_id.destination}"
 
 # A user can add Attraction to a column on the trip-board
 class Attraction(models.Model):         # is a trello card
@@ -53,7 +57,7 @@ class Attraction(models.Model):         # is a trello card
         ('church', 'Church'),
         ('other', 'Other')
     ]
-    column_id = models.ForeignKey(Column, on_delete=models.CASCADE)
+    column_id = models.ForeignKey(Column, on_delete=models.CASCADE, related_name='attractions')
     title = models.CharField(max_length=60)
     location = models.CharField(max_length=50)
     category = models.CharField(max_length=40, choices=CATEGORY_CHOICES, default='other')
@@ -62,14 +66,17 @@ class Attraction(models.Model):         # is a trello card
     ticket = models.URLField(blank=True)                              # or file, to be able to accept all images, urls, or pdfs
     date = models.DateTimeField()
     cost = models.DecimalField(max_digits=6, decimal_places=2)
-    visited =models.BooleanField()
+    visited = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['date']
 
     def clean(self):
         if self.cost < 0:
             raise ValidationError("Cost cannot be negative")
    
     def __str__(self) -> str:
-        return self.title
+        return f"{self.title} - {self.column_id.trip_id.destination}"
 
 
 class VisitedAttraction(models.Model):
