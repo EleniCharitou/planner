@@ -56,3 +56,16 @@ class IsTripOwner(permissions.BasePermission):
             return obj.attraction_id.column_id.trip_id.owner == request.user
 
         return False
+
+class IsPostAuthorOrReadOnly(permissions.BasePermission):
+    """
+    Custom permission to only allow authors of a post to edit or delete it.
+    Anyone can read posts.
+    """
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+
+        # Write permissions are only allowed to the author of the post
+        return obj.author == request.user

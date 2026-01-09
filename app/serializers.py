@@ -109,12 +109,37 @@ class VisitedAttractionSerializer(serializers.ModelSerializer):
         return value
 
 class PostSerializer(serializers.ModelSerializer):
-    picture = serializers.ImageField(required=False, allow_null=True)
+    author = serializers.ReadOnlyField(source='author.id')
+    author_username = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
-        fields = ['id', 'author', 'title', 'content', 'slug', 'created_at', 'picture']
-        read_only_fields = ['slug', 'created_at']
+        fields = ['id', 'author', 'author_username', 'title', 'content', 'slug', 'created_at', 'picture']
+        read_only_fields = ['slug', 'created_at', 'author']
+
+    def get_author_username(self, obj):
+        user = obj.author
+        if not user:
+            return "Unknown"
+
+        first = (user.name or "").strip()
+        last = (user.last_name or "").strip()
+
+        if first and last:
+            return f"{first.capitalize()} {last[0].upper()}."
+        elif first:
+            return first.capitalize()
+        return user.email
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        if instance.picture:
+            request = self.context.get('request')
+            if request:
+                representation['picture'] = request.build_absolute_uri(instance.picture.url)
+            else:
+                representation['picture'] = instance.picture.url
+        return representation
 
     def get_picture(self, obj):
         if obj.picture:
@@ -123,6 +148,3 @@ class PostSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.picture.url)
             return obj.picture.url
         return None
-
-# get_recent_posts = http://127.0.0.1:8000/api/posts/recent
-# specific_post = http://127.0.0.1:8000/api/posts/:slug

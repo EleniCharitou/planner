@@ -89,7 +89,7 @@ class VisitedAttraction(models.Model):
 
 
 class Post(models.Model):
-    author = models.CharField(max_length=100)
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='posts')
     title = models.CharField(max_length=255)
     content = models.TextField()
     slug = models.SlugField(unique=True, null=True, blank=True)

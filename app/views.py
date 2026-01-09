@@ -1,6 +1,6 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, status
-from rest_framework.decorators import action, api_view
+from rest_framework.decorators import action, api_view, permission_classes as permission_decorator
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
@@ -10,7 +10,7 @@ from .serializers import (
     TripSerializer, ColumnSerializer, AttractionSerializer,
     VisitedAttractionSerializer, PostSerializer
 )
-from .permissions import IsTripOwner
+from .permissions import IsTripOwner, IsPostAuthorOrReadOnly
 
 
 class TripViewSet(viewsets.ModelViewSet):
@@ -139,17 +139,35 @@ class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
     lookup_field = 'slug'
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAuthenticatedOrReadOnly, IsPostAuthorOrReadOnly]
+
+    def perform_create(self, serializer):
+        # Automatically set the author to the logged-in user
+        serializer.save(author=self.request.user)
+
+    def perform_update(self, serializer):
+        # Ensure author cannot be changed during update
+        serializer.save()
 
     @action(detail=False, methods=['GET'])
     def recent(self, request):
         posts = Post.objects.all()[:6]
-        serializer = PostSerializer(posts, many=True)
+        serializer = PostSerializer(posts, many=True, context={'request': request})
         return Response(serializer.data)
 
     @api_view(['POST'])
+    @permission_decorator([IsAuthenticated])
     def upload_image(request):
-        if 'image' in request.FILES:
-            image = request.FILES['image']
-            return Response({'image_url': 'path/to/uploaded/image.jpg'})
-        return Response({'error': 'No image provided'}, status=400)
+        """
+        Standalone endpoint for image upload
+        """
+        if 'image' not in request.FILES:
+            return Response({'error': 'No image provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+        image = request.FILES['image']
+
+        return Response({
+            'message': 'Image uploaded successfully',
+            'filename': image.name,
+            'size': image.size
+        }, status=status.HTTP_200_OK)
