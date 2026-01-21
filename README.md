@@ -39,10 +39,22 @@ python -m venv venv
 # Install dependencies
 pip install -r requirements.txt
 ```
+### Managing Dependencies
+If you install new packages during development, ensure the `requirements.txt` is updated:
+```bash
+pip freeze > requirements.txt
+```
 
 ### 3. Environment Configuration
-Create a `.env` file in the root directory. Use the keys below to configure your local instance:
+Create a `.env` file in the root directory:
+```
+# Copy the provided template to create your local .env file
+
+cp .env.template .env
+```
 ```env
+# Or configure your local insatnce with the following keys
+ 
 SECRET_KEY=your_secret_key_here
 DEBUG=True
 
@@ -52,12 +64,13 @@ DB_PASSWORD=your_password
 DB_HOST=localhost
 DB_PORT=5432
 
-CORS_ALLOWED_ORIGINS=http://localhost:5173,[http://127.0.0.1:5174](http://127.0.0.1:5174)
+CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5174
 ```
-
 ### 4. Database Setup
-Ensure your PostgreSQL server is running and the database specified in `.env` exists.
-
+**Create the Database:** Before running migrations, manually create a PostgreSQL database named `travel-planner-db` (or the name you chose in your `.env`), via psql or pgAdmin:
+   ```sql
+   CREATE DATABASE "travel-planner-db";
+   ```
 ```bash
 # Apply database migrations to create tables
 python manage.py migrate
