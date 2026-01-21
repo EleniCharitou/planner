@@ -32,10 +32,12 @@ Clone the repository and navigate to the backend directory:
 ```bash
 # Create a virtual environment
 python -m venv venv
-
+```
+```
 # Activate virtual environment (Windows)
 .\venv\Scripts\activate
-
+```
+```
 # Install dependencies
 pip install -r requirements.txt
 ```
@@ -74,7 +76,8 @@ CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5174
 ```bash
 # Apply database migrations to create tables
 python manage.py migrate
-
+```
+```
 # Create an administrator account for the Django Admin UI
 python manage.py createsuperuser
 ```
