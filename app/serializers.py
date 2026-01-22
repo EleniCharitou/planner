@@ -59,7 +59,7 @@ class AttractionSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'column_id', 'column_title', 'trip_destination',
             'title', 'location', 'category', 'mapUrl', 'ticket',
-            'date', 'cost', 'visited'
+            'date', 'cost', 'visited', 'position',
         ]
 
     def validate_column_id(self, value):

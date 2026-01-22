@@ -1,3 +1,5 @@
+from django.db import transaction
+from django.db.models import F
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes as permission_decorator
@@ -19,6 +21,8 @@ class TripViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         # Filter trips to only show those owned by the current user.
+        if getattr(self, 'swagger_fake_view', False) or self.request.user.is_anonymous:
+            return Trip.objects.none()
         return Trip.objects.filter(owner=self.request.user)
 
     def perform_create(self, serializer):
@@ -37,7 +41,9 @@ class ColumnViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsTripOwner]
 
     def get_queryset(self):
-        # Filter columns to only show those belonging to the user's trips.
+        # Safety check for Swagger schema generation
+        if getattr(self, 'swagger_fake_view', False) or self.request.user.is_anonymous:
+            return Column.objects.none()
         queryset = Column.objects.filter(trip_id__owner=self.request.user)
         trip_id = self.request.query_params.get('trip_id', None)
 
@@ -60,11 +66,9 @@ class AttractionViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsTripOwner]
 
     def get_queryset(self):
-        """
-        Filter attractions to only show those belonging to the user's trips.
-        """
-        return Attraction.objects.filter(
-            column_id__trip_id__owner=self.request.user
+        if getattr(self, 'swagger_fake_view', False) or self.request.user.is_anonymous:
+            return Attraction.objects.none()
+        return Attraction.objects.filter(column_id__trip_id__owner=self.request.user
         )
 
     def perform_create(self, serializer):
@@ -75,6 +79,54 @@ class AttractionViewSet(viewsets.ModelViewSet):
         if column.trip_id.owner != self.request.user:
             raise PermissionDenied("You cannot add attractions to trips you don't own.")
         serializer.save()
+
+    def perform_destroy(self, instance):
+        """
+        Gap Closure: Reorder column after an attraction is deleted.
+        """
+        col_id = instance.column_id_id
+        instance.delete()
+        self._reorder_column(col_id)
+
+    @action(detail=True, methods=['patch'], url_path='move')
+    def move(self, request, pk=None):
+        """Move a single attraction to a new column and/or position"""
+        attraction = self.get_object()
+        new_col_id = request.data.get('column_id', attraction.column_id_id)
+        new_pos = int(request.data.get('position', 0))
+        old_col_id = attraction.column_id_id
+
+        with transaction.atomic():
+            # 'Push' existing attractions down: Any item at or after the 'new_pos' gets its position incremented by 1
+            Attraction.objects.filter(
+                column_id_id=new_col_id,
+                position__gte=new_pos
+            ).update(position=F('position') + 1)
+
+            # Assign the new position and column to our moved item
+            attraction.column_id_id = new_col_id
+            attraction.position = new_pos
+            attraction.save()
+
+            # Close the gap left in the old column and ensure the new column is perfectly sequential
+            self._reorder_column(old_col_id)
+            if new_col_id != old_col_id:
+                self._reorder_column(new_col_id)
+
+        serializer = self.get_serializer(attraction)
+        return Response(serializer.data)
+
+    def _reorder_column(self, column_id):
+        """
+        Force-updates the database so positions are strictly 0, 1, 2, 3...
+        """
+        attractions = Attraction.objects.filter(column_id_id=column_id).order_by('position', 'id')
+
+        for index, attraction in enumerate(attractions):
+            if attraction.position != index:
+                attraction.position = index
+                attraction.save(update_fields=['position'])
+
 
 class GroupedAttractionsViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
@@ -88,29 +140,23 @@ class GroupedAttractionsViewSet(viewsets.ViewSet):
         if trip_id:
             # Verify the trip belongs to the user
             trip = get_object_or_404(Trip, id=trip_id, owner=request.user)
-            attractions = Attraction.objects.filter(
-                column_id__trip_id=trip
-            ).order_by('column_id')
+            attractions = Attraction.objects.filter(column_id__trip_id=trip).order_by('column_id', 'position')
+
         else:
-            # Get all attractions from user's trips
-            attractions = Attraction.objects.filter(
-                column_id__trip_id__owner=request.user
-            ).order_by('column_id')
+            attractions = Attraction.objects.filter(column_id__trip_id__owner=request.user).order_by('column_id','position')
 
         grouped_data = {}
         for attraction in attractions:
-            column = attraction.column_id
-            column_id = column.id
 
-            if column_id not in grouped_data:
-                grouped_data[column_id] = {
-                    "id": column_id,
-                    "title": column.title,
+            col_id = attraction.column_id.id
+
+            if col_id not in grouped_data:
+                grouped_data[col_id] = {
+                    "id": col_id,
+                    "title": attraction.column_id.title,
                     "cards": []
                 }
-            grouped_data[column_id]["cards"].append(
-                AttractionSerializer(attraction).data
-            )
+            grouped_data[col_id]["cards"].append(AttractionSerializer(attraction).data)
 
         return Response(list(grouped_data.values()))
 
@@ -119,12 +165,12 @@ class VisitedAttractionViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsTripOwner]
 
     def get_queryset(self):
-        """
-        Filter visited attractions to only show those from the user's trips.
-        """
+        if getattr(self, 'swagger_fake_view', False) or self.request.user.is_anonymous:
+            return VisitedAttraction.objects.none()
+
         return VisitedAttraction.objects.filter(
             attraction_id__column_id__trip_id__owner=self.request.user
-        )
+        ).select_related('attraction_id', 'attraction_id__column_id', 'attraction_id__column_id__trip_id')
 
     def perform_create(self, serializer):
         """
@@ -155,19 +201,19 @@ class PostViewSet(viewsets.ModelViewSet):
         serializer = PostSerializer(posts, many=True, context={'request': request})
         return Response(serializer.data)
 
-    @api_view(['POST'])
-    @permission_decorator([IsAuthenticated])
-    def upload_image(request):
-        """
-        Standalone endpoint for image upload
-        """
-        if 'image' not in request.FILES:
-            return Response({'error': 'No image provided'}, status=status.HTTP_400_BAD_REQUEST)
+@api_view(['POST'])
+@permission_decorator([IsAuthenticated])
+def upload_image(request):
+    """
+    Standalone endpoint for image upload
+    """
+    if 'image' not in request.FILES:
+        return Response({'error': 'No image provided'}, status=status.HTTP_400_BAD_REQUEST)
 
-        image = request.FILES['image']
+    image = request.FILES['image']
 
-        return Response({
-            'message': 'Image uploaded successfully',
-            'filename': image.name,
-            'size': image.size
-        }, status=status.HTTP_200_OK)
+    return Response({
+        'message': 'Image uploaded successfully',
+        'filename': image.name,
+        'size': image.size
+    }, status=status.HTTP_200_OK)

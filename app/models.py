@@ -67,14 +67,23 @@ class Attraction(models.Model):         # is a trello card
     date = models.DateTimeField()
     cost = models.DecimalField(max_digits=6, decimal_places=2)
     visited = models.BooleanField(default=False)
+    position = models.PositiveIntegerField(blank=True, null=True)
 
     class Meta:
-        ordering = ['date']
+        ordering = ['column_id', 'position']
 
     def clean(self):
         if self.cost < 0:
             raise ValidationError("Cost cannot be negative")
-   
+
+    def save(self, *args, **kwargs):
+        if self.pk is None and self.position is None:
+            max_pos = Attraction.objects.filter(
+                column_id=self.column_id
+            ).aggregate(models.Max('position'))['position__max']
+            self.position = 0 if max_pos is None else max_pos + 1
+        super().save(*args, **kwargs)
+
     def __str__(self) -> str:
         return f"{self.title} - {self.column_id.trip_id.destination}"
 
