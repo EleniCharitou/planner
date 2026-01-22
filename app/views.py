@@ -137,26 +137,25 @@ class GroupedAttractionsViewSet(viewsets.ViewSet):
         """
         trip_id = request.query_params.get('trip_id')
 
-        if trip_id:
-            # Verify the trip belongs to the user
-            trip = get_object_or_404(Trip, id=trip_id, owner=request.user)
-            attractions = Attraction.objects.filter(column_id__trip_id=trip).order_by('column_id', 'position')
-
-        else:
-            attractions = Attraction.objects.filter(column_id__trip_id__owner=request.user).order_by('column_id','position')
+        if not trip_id:
+            return Response({"error": "trip_id is required"}, status=400)
+        # Verify the trip belongs to the user
+        trip = get_object_or_404(Trip, id=trip_id, owner=request.user)
+        columns = Column.objects.filter(trip_id=trip).order_by('id')
+        attractions = Attraction.objects.filter(column_id__trip_id=trip).order_by('position')
 
         grouped_data = {}
+        for col in columns:
+            grouped_data[col.id] = {
+                "id": str(col.id),
+                "title": col.title,
+                "cards": []
+            }
+
         for attraction in attractions:
-
             col_id = attraction.column_id.id
-
-            if col_id not in grouped_data:
-                grouped_data[col_id] = {
-                    "id": col_id,
-                    "title": attraction.column_id.title,
-                    "cards": []
-                }
-            grouped_data[col_id]["cards"].append(AttractionSerializer(attraction).data)
+            if col_id in grouped_data:
+                grouped_data[col_id]["cards"].append(AttractionSerializer(attraction).data)
 
         return Response(list(grouped_data.values()))
 
