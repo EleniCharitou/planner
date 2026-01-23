@@ -68,8 +68,7 @@ class AttractionViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False) or self.request.user.is_anonymous:
             return Attraction.objects.none()
-        return Attraction.objects.filter(column_id__trip_id__owner=self.request.user
-        )
+        return Attraction.objects.filter(column_id__trip_id__owner=self.request.user)
 
     def perform_create(self, serializer):
         """
@@ -90,28 +89,48 @@ class AttractionViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['patch'], url_path='move')
     def move(self, request, pk=None):
-        """Move a single attraction to a new column and/or position"""
+        """
+        Move a single attraction to a new column and/or position
+        """
         attraction = self.get_object()
         new_col_id = request.data.get('column_id', attraction.column_id_id)
         new_pos = int(request.data.get('position', 0))
         old_col_id = attraction.column_id_id
+        old_pos = attraction.position
 
         with transaction.atomic():
-            # 'Push' existing attractions down: Any item at or after the 'new_pos' gets its position incremented by 1
-            Attraction.objects.filter(
-                column_id_id=new_col_id,
-                position__gte=new_pos
-            ).update(position=F('position') + 1)
+            # Moving within the SAME column
+            if str(old_col_id) == str(new_col_id):
+                if new_pos > old_pos:
+                    Attraction.objects.filter(
+                        column_id_id=new_col_id,
+                        position__gt=old_pos,
+                        position__lte=new_pos
+                    ).update(position=F('position') - 1)
 
-            # Assign the new position and column to our moved item
-            attraction.column_id_id = new_col_id
-            attraction.position = new_pos
-            attraction.save()
+                elif new_pos < old_pos:
+                    Attraction.objects.filter(
+                        column_id_id=new_col_id,
+                        position__gte=new_pos,
+                        position__lt=old_pos
+                    ).update(position=F('position') + 1)
 
-            # Close the gap left in the old column and ensure the new column is perfectly sequential
-            self._reorder_column(old_col_id)
-            if new_col_id != old_col_id:
-                self._reorder_column(new_col_id)
+                # Update the item itself
+                attraction.position = new_pos
+                attraction.save()
+
+            # Moving to a DIFFERENT column
+            else:
+                Attraction.objects.filter(
+                    column_id_id=new_col_id,
+                    position__gte=new_pos
+                ).update(position=F('position') + 1)
+
+                attraction.column_id_id = new_col_id
+                attraction.position = new_pos
+                attraction.save()
+
+                self._reorder_column(old_col_id)
 
         serializer = self.get_serializer(attraction)
         return Response(serializer.data)
@@ -144,13 +163,10 @@ class GroupedAttractionsViewSet(viewsets.ViewSet):
         columns = Column.objects.filter(trip_id=trip).order_by('id')
         attractions = Attraction.objects.filter(column_id__trip_id=trip).order_by('position')
 
-        grouped_data = {}
-        for col in columns:
-            grouped_data[col.id] = {
-                "id": str(col.id),
-                "title": col.title,
-                "cards": []
-            }
+        grouped_data = {
+            col.id: {"id": str(col.id), "title": col.title, "cards": []}
+            for col in columns
+        }
 
         for attraction in attractions:
             col_id = attraction.column_id.id
