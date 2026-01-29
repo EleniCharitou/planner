@@ -2,7 +2,7 @@ import pytest
 from rest_framework.exceptions import ValidationError
 from django.utils.timezone import now
 from datetime import timedelta
-from app.models import Trip, Attraction
+from app.models import Trip, Attraction, Post
 
 
 @pytest.mark.django_db
@@ -35,3 +35,15 @@ class TestAttractionLogic:
         )
         with pytest.raises(ValidationError):
             attraction.clean()
+
+@pytest.mark.django_db
+class TestPostLogic:
+    def test_slug_generation(self, user):
+        """Test that identical titles generate unique slugs automatically.
+        Logic: 'My Trip' -> 'my-trip', then 'my-trip1', 'my-trip2' """
+        p1 = Post.objects.create(author=user, title="My Trip", content="Content A")
+        assert p1.slug == "my-trip"
+        p2 = Post.objects.create(author=user, title="My Trip", content="Content B")
+        assert p2.slug == "my-trip1"
+        p3 = Post.objects.create(author=user, title="My Trip", content="Content C")
+        assert p3.slug == "my-trip2"
