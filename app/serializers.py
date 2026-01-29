@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import *
+from app.models import Trip, Column, Attraction, VisitedAttraction, Post
 
 
 class TripSerializer(serializers.ModelSerializer):
@@ -40,10 +40,9 @@ class ColumnSerializer(serializers.ModelSerializer):
         Ensure the trip belongs to the current user.
         """
         request = self.context.get('request')
-        if request and hasattr(request, 'user'):
-            if value.owner != request.user:
-                raise serializers.ValidationError(
-                    "You cannot add columns to trips you don't own."
+        if request and hasattr(request, 'user') and value.owner != request.user:
+            raise serializers.ValidationError(
+                "You cannot add columns to trips you don't own."
                 )
         return value
 

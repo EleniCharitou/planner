@@ -1,30 +1,33 @@
-from math import trunc
-
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.db.models import F, Q
 from django.utils.text import slugify
 from rest_framework.exceptions import ValidationError
 
 from planner import settings
 
-class Trip(models.Model):           # is a Board
-    destination = models.CharField(max_length=255)      #maybe change that to: slug = models.SlugField(unique=True, max_length=255)
+class Trip(models.Model):
+    destination = models.CharField(max_length=255)
     trip_members = models.JSONField(default=list)
     start_date = models.DateTimeField()
     start_time = models.TimeField()
     end_date = models.DateTimeField()
     end_time = models.TimeField()
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='trips')
-    # is_public = models.BooleanField(default=False)
-    # budget = models.ForeignKey
 
     class Meta:
         ordering = ['-start_date']
+        constraints = [
+            models.CheckConstraint(
+                check=Q(start_date__lte=F('end_date')),
+                name='check_start_date_before_end_date'
+            )
+        ]
 
     def clean(self):
-        if self.start_date and self.end_date:
-            if self.start_date > self.end_date:
-                raise ValidationError("Start date must be before end date")
+        super().clean()
+        if self.start_date and self.end_date and self.start_date > self.end_date:
+            raise ValidationError("Start date must be before end date")
 
     def get_duration_days(self):
         return (self.end_date - self.start_date).days
@@ -32,11 +35,11 @@ class Trip(models.Model):           # is a Board
     def __str__(self) -> str:
         return f"{self.destination} - {self.owner.email}"
 
-# stores the attraction that user wants to visit  within a trip in a specific column-day
+# stores the attraction that user wants to visit within a trip in a specific column-day
 class Column(models.Model):
     trip_id = models.ForeignKey(Trip, on_delete=models.CASCADE, related_name='columns')
     title = models.CharField(max_length=100, default='Day')
-    position = models.PositiveBigIntegerField()      # a numeric field to identify where on the board it would be shown
+    position = models.PositiveBigIntegerField()
 
     class Meta:
         unique_together = ('trip_id', 'position')
@@ -46,7 +49,7 @@ class Column(models.Model):
         return f"{self.title} - {self.trip_id.destination}"
 
 # A user can add Attraction to a column on the trip-board
-class Attraction(models.Model):         # is a trello card
+class Attraction(models.Model):
     CATEGORY_CHOICES = [
         ('museum', 'Museum'),
         ('landmark', 'Landmark'),
@@ -61,9 +64,8 @@ class Attraction(models.Model):         # is a trello card
     title = models.CharField(max_length=60)
     location = models.CharField(max_length=50)
     category = models.CharField(max_length=40, choices=CATEGORY_CHOICES, default='other')
-    # maybe it's better to create a separate model 'attraction_attachment' for extra fields [id, attraction_id, uploaded_date, filename, file_location]
     mapUrl = models.URLField(blank=True, null=True)
-    ticket = models.URLField(blank=True)                              # or file, to be able to accept all images, urls, or pdfs
+    ticket = models.URLField(blank=True)
     date = models.DateTimeField()
     cost = models.DecimalField(max_digits=6, decimal_places=2)
     visited = models.BooleanField(default=False)
