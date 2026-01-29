@@ -19,7 +19,7 @@ class Trip(models.Model):
         ordering = ['-start_date']
         constraints = [
             models.CheckConstraint(
-                check=Q(start_date__lte=F('end_date')),
+                condition=Q(start_date__lte=F('end_date')),
                 name='check_start_date_before_end_date'
             )
         ]

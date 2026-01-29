@@ -17,3 +17,4 @@ Pipfile
 Pipfile.lock
 
 staticfiles/
+coverage/
