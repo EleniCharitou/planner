@@ -1,21 +1,20 @@
 import pytest
 from django.urls import reverse
-from django.utils.timezone import now
+
 from app.models import Attraction, Column, Post
 
 
 @pytest.mark.django_db
 class TestAttractionFlow:
-
     def test_create_attraction(self, auth_client, column):
         """Ensure authenticated user can create attraction"""
-        url = reverse('attraction-list')
+        url = reverse("attraction-list")
         data = {
             "column_id": column.id,
             "title": "Eiffel Tower",
             "location": "Paris",
             "category": "landmark",
-            "cost": "25.00"
+            "cost": "25.00",
         }
         response = auth_client.post(url, data)
         assert response.status_code == 201
@@ -23,11 +22,17 @@ class TestAttractionFlow:
 
     def test_move_attraction_same_column(self, auth_client, column):
         """Test the custom 'move' action"""
-        a1 = Attraction.objects.create(column_id=column, title="A", location="X", cost=0, position=0)
-        a2 = Attraction.objects.create(column_id=column, title="B", location="X", cost=0, position=1)
-        a3 = Attraction.objects.create(column_id=column, title="C", location="X", cost=0, position=2)
+        a1 = Attraction.objects.create(
+            column_id=column, title="A", location="X", cost=0, position=0
+        )
+        a2 = Attraction.objects.create(
+            column_id=column, title="B", location="X", cost=0, position=1
+        )
+        a3 = Attraction.objects.create(
+            column_id=column, title="C", location="X", cost=0, position=2
+        )
 
-        url = reverse('attraction-move', args=[a3.id])
+        url = reverse("attraction-move", args=[a3.id])
         data = {"column_id": column.id, "position": 0}
 
         response = auth_client.patch(url, data)
@@ -47,15 +52,17 @@ class TestSecurity:
     def test_cannot_access_others_trip(self, api_client, other_user, trip):
         """Hacker cannot see Owner's trip"""
         api_client.force_authenticate(user=other_user)
-        url = reverse('trip-detail', args=[trip.id])
+        url = reverse("trip-detail", args=[trip.id])
 
         response = api_client.get(url)
         assert response.status_code == 404
 
+
 @pytest.mark.django_db
 class TestGroupedAttractions:
     def test_kanban_structure(self, auth_client, trip):
-        """Ensures the API returns the specific nested structure required by the frontend"""
+        """Ensures the API returns the specific nested structure
+           required by the frontend"""
         col1 = Column.objects.create(trip_id=trip, title="Day 1", position=0)
         col2 = Column.objects.create(trip_id=trip, title="Day 2", position=1)
 
@@ -63,7 +70,7 @@ class TestGroupedAttractions:
             column_id=col1, title="Louvre Museum", location="Paris", cost=20, position=0
         )
 
-        url = reverse('grouped_attractions-list')
+        url = reverse("grouped_attractions-list")
         response = auth_client.get(f"{url}?trip_id={trip.id}")
 
         assert response.status_code == 200
@@ -91,7 +98,7 @@ class TestPostPermissions:
         """Owner should be able to edit their own post."""
         post = Post.objects.create(author=user, title="My Post", content="Original")
 
-        url = reverse('posts-detail', args=[post.slug])
+        url = reverse("posts-detail", args=[post.slug])
         data = {"title": "Updated Title", "content": "Updated"}
 
         response = auth_client.patch(url, data)
@@ -105,7 +112,7 @@ class TestPostPermissions:
 
         api_client.force_authenticate(user=other_user)
 
-        url = reverse('posts-detail', args=[post.slug])
+        url = reverse("posts-detail", args=[post.slug])
         data = {"content": "Hacked"}
 
         response = api_client.patch(url, data)
@@ -120,8 +127,8 @@ class TestPostPermissions:
         post = Post.objects.create(author=user, title="Public Post", content="Hello")
 
         api_client.force_authenticate(user=other_user)
-        url = reverse('posts-detail', args=[post.slug])
+        url = reverse("posts-detail", args=[post.slug])
 
         response = api_client.get(url)
         assert response.status_code == 200
-        assert response.data['title'] == "Public Post"
+        assert response.data["title"] == "Public Post"

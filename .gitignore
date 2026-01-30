@@ -17,4 +17,13 @@ Pipfile
 Pipfile.lock
 
 staticfiles/
-coverage/
+
+# Test coverage reports
+.coverage
+coverage.xml
+htmlcov/
+tests/.coverage
+tests/coverage.xml
+
+# User uploaded media
+media/
