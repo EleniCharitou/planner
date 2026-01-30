@@ -7,9 +7,6 @@ from app.models import Attraction, Column, Post, Trip, VisitedAttraction
 class TripSerializer(serializers.ModelSerializer):
     owner_email = serializers.EmailField(source="owner.email", read_only=True)
     duration_days = serializers.IntegerField(source="get_duration_days", read_only=True)
-    trip_members = serializers.PrimaryKeyRelatedField(
-        many=True, queryset=get_user_model().objects.all(), required=False
-    )
 
     class Meta:
         model = Trip

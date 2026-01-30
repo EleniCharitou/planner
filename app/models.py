@@ -9,9 +9,7 @@ from planner import settings
 
 class Trip(models.Model):
     destination = models.CharField(max_length=255)
-    trip_members = models.ManyToManyField(
-        settings.AUTH_USER_MODEL, related_name="shared_trips", blank=True
-    )
+    trip_members = models.JSONField(default=list, blank=True)
     start_date = models.DateTimeField()
     start_time = models.TimeField()
     end_date = models.DateTimeField()
