@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from app.models import Trip, Column, Attraction, VisitedAttraction, Post
 
@@ -5,6 +6,10 @@ from app.models import Trip, Column, Attraction, VisitedAttraction, Post
 class TripSerializer(serializers.ModelSerializer):
     owner_email = serializers.EmailField(source='owner.email', read_only=True)
     duration_days = serializers.IntegerField(source='get_duration_days', read_only=True)
+    trip_members = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=get_user_model().objects.all(),
+        required=False)
 
     class Meta:
         model = Trip
@@ -58,7 +63,7 @@ class AttractionSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'column_id', 'column_title', 'trip_destination',
             'title', 'location', 'category', 'mapUrl', 'ticket',
-            'date', 'cost', 'visited', 'position',
+            'cost', 'visited', 'position',
         ]
 
     def validate_column_id(self, value):

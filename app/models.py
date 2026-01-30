@@ -8,7 +8,10 @@ from planner import settings
 
 class Trip(models.Model):
     destination = models.CharField(max_length=255)
-    trip_members = models.JSONField(default=list)
+    trip_members = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name='shared_trips',
+        blank=True)
     start_date = models.DateTimeField()
     start_time = models.TimeField()
     end_date = models.DateTimeField()
@@ -66,7 +69,6 @@ class Attraction(models.Model):
     category = models.CharField(max_length=40, choices=CATEGORY_CHOICES, default='other')
     mapUrl = models.URLField(blank=True, null=True)
     ticket = models.URLField(blank=True)
-    date = models.DateTimeField()
     cost = models.DecimalField(max_digits=6, decimal_places=2)
     visited = models.BooleanField(default=False)
     position = models.PositiveIntegerField(blank=True, null=True)

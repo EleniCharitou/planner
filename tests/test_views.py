@@ -15,7 +15,6 @@ class TestAttractionFlow:
             "title": "Eiffel Tower",
             "location": "Paris",
             "category": "landmark",
-            "date": now(),
             "cost": "25.00"
         }
         response = auth_client.post(url, data)
@@ -24,9 +23,9 @@ class TestAttractionFlow:
 
     def test_move_attraction_same_column(self, auth_client, column):
         """Test the custom 'move' action"""
-        a1 = Attraction.objects.create(column_id=column, title="A", location="X", date=now(), cost=0, position=0)
-        a2 = Attraction.objects.create(column_id=column, title="B", location="X", date=now(), cost=0, position=1)
-        a3 = Attraction.objects.create(column_id=column, title="C", location="X", date=now(), cost=0, position=2)
+        a1 = Attraction.objects.create(column_id=column, title="A", location="X", cost=0, position=0)
+        a2 = Attraction.objects.create(column_id=column, title="B", location="X", cost=0, position=1)
+        a3 = Attraction.objects.create(column_id=column, title="C", location="X", cost=0, position=2)
 
         url = reverse('attraction-move', args=[a3.id])
         data = {"column_id": column.id, "position": 0}
@@ -61,8 +60,7 @@ class TestGroupedAttractions:
         col2 = Column.objects.create(trip_id=trip, title="Day 2", position=1)
 
         attraction = Attraction.objects.create(
-            column_id=col1, title="Louvre Museum", location="Paris",
-            date=now(), cost=20, position=0
+            column_id=col1, title="Louvre Museum", location="Paris", cost=20, position=0
         )
 
         url = reverse('grouped_attractions-list')
