@@ -1,7 +1,7 @@
 import pytest
 from django.urls import reverse
 
-from app.models import Attraction, Column, Post
+from app.models import Attraction, Column, Post, Trip
 
 
 @pytest.mark.django_db
@@ -132,3 +132,87 @@ class TestPostPermissions:
         response = api_client.get(url)
         assert response.status_code == 200
         assert response.data["title"] == "Public Post"
+
+
+@pytest.mark.django_db
+class TestTripCreationFlow:
+    def test_create_trip_generates_columns_automatically(self, auth_client):
+        """
+        Verify that creating a multi-day trip automatically, Creates the Trip, 'Attractions' column (pos 0).
+        """
+        url = reverse("trip-list")
+
+        data = {
+            "destination": "Rome",
+            "start_date": "2025-05-01",
+            "end_date": "2025-05-03",
+            "start_time": "09:00:00",
+            "end_time": "18:00:00",
+            "trip_members": [],
+        }
+
+        response = auth_client.post(url, data)
+
+        assert response.status_code == 201
+        assert Trip.objects.count() == 1
+
+        trip = Trip.objects.first()
+        columns = Column.objects.filter(trip_id=trip).order_by("position")
+
+        assert columns.count() == 4
+
+        assert columns[0].title == "🎯 Attractions to Visit"
+        assert columns[0].position == 0
+
+        assert "Day 1" in columns[1].title
+        assert columns[1].position == 1
+
+        assert "Day 3" in columns[3].title
+        assert columns[3].position == 3
+
+    def test_create_single_day_trip_success(self, auth_client):
+        """
+        Test that a Single Day Trip (Start == End) is ALLOWED. Should create 2 columns: 'Attractions' + 'Day 1'.
+        """
+        url = reverse("trip-list")
+
+        data = {
+            "destination": "Day Trip to Beach",
+            "start_date": "2025-07-20",
+            "end_date": "2025-07-20",
+            "start_time": "08:00:00",
+            "end_time": "20:00:00",
+            "trip_members": []
+        }
+
+        response = auth_client.post(url, data)
+
+        assert response.status_code == 201
+
+        trip = Trip.objects.first()
+        columns = Column.objects.filter(trip_id=trip).order_by('position')
+
+        assert columns.count() == 2
+
+        assert columns[0].title == "🎯 Attractions to Visit"
+        assert "Day 1" in columns[1].title
+
+    def test_create_trip_fails_without_dates(self, auth_client):
+        """
+        Ensure that creating a trip without start/end dates fails.
+        Dates are mandatory fields.
+        """
+        url = reverse("trip-list")
+        data = {
+            "destination": "Dream Trip",
+        }
+
+        response = auth_client.post(url, data)
+
+        assert response.status_code == 400
+
+        errors = response.json()
+        assert "start_date" in errors
+        assert "end_date" in errors
+
+        assert Trip.objects.count() == 0

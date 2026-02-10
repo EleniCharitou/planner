@@ -1,3 +1,4 @@
+from datetime import timedelta
 from django.db import transaction
 from django.db.models import F
 from django.shortcuts import get_object_or_404
@@ -30,8 +31,34 @@ class TripViewSet(viewsets.ModelViewSet):
         return Trip.objects.filter(owner=self.request.user)
 
     def perform_create(self, serializer):
-        # Automatically set the owner to the current user when creating a trip.
-        serializer.save(owner=self.request.user)
+        trip = serializer.save(owner=self.request.user)
+        columns_to_create = []
+
+        columns_to_create.append(
+            Column(
+                trip_id=trip,
+                title="🎯 Attractions to Visit",
+                position=0
+            )
+        )
+
+        if trip.start_date and trip.end_date:
+            delta = trip.end_date - trip.start_date
+            duration_days = delta.days + 1
+
+            for i in range(duration_days):
+                current_date = trip.start_date + timedelta(days=i)
+                date_str = current_date.strftime("%b %d")
+
+                columns_to_create.append(
+                    Column(
+                        trip_id=trip,
+                        title=f"Day {i + 1} - {date_str}",
+                        position=i + 1
+                    )
+                )
+
+        Column.objects.bulk_create(columns_to_create)
 
     def retrieve(self, request, *args, **kwargs):
         trip = self.get_object()
