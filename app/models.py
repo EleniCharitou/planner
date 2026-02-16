@@ -36,7 +36,7 @@ class Trip(models.Model):
             raise ValidationError("Start date must be before end date")
 
     def get_duration_days(self):
-        return (self.end_date - self.start_date).days
+        return (self.end_date - self.start_date).days + 1
 
 
 # stores the attraction that user wants to visit within a trip in a specific column-day
