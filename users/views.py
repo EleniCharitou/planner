@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate
+from django.db.migrations import serializer
 from rest_framework import status
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -63,6 +64,48 @@ class UserView(APIView):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
 
+    def patch(self, request):
+        user = request.user
+        data = request.data
+
+        current_password = data.get("current_password")
+        new_password = data.get("new_password")
+        confirm_password = data.get("confirm_password")
+
+        if current_password or new_password:
+            if not current_password:
+                return Response(
+                    {"details": "Please provide your current password."},
+                    status=status.HTTP_400_BAD_REQUEST)
+
+            if not new_password:
+                return Response({"detail": "Please provide a new password."}, status=status.HTTP_400_BAD_REQUEST)
+
+            if new_password != confirm_password:
+                return Response({"detail": "New passwords do not match."}, status=status.HTTP_400_BAD_REQUEST)
+
+            if not user.check_password(current_password):
+                return Response({"detail": "Incorrect current password."}, status=status.HTTP_400_BAD_REQUEST)
+
+            user.set_password(new_password)
+            user.save()
+
+        profile_data = {
+            "name": data.get("name", user.name),
+            "last_name": data.get("last_name", user.last_name),
+            "email": data.get("email", user.email),
+        }
+
+        serializer = UserSerializer(request.user, data=profile_data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "detail": "Profile updated successfully!",
+                "user": serializer.data
+            }, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
